@@ -33,7 +33,7 @@ jobs:
     - name: Invoke echo 1 workflow by id
       uses: ./
       with:
-        workflow: '1854247'
+        workflow: '4058594'
         token: ${{ secrets.PERSONAL_TOKEN }}
         inputs: '{"message": "Mango jam"}'
 
