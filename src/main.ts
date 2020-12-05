@@ -9,6 +9,8 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { ActionsGetWorkflowResponseData } from '@octokit/types'
 
+type ValidateFunction = (response: Record<string, unknown>) => boolean
+
 //
 // Check if run has completed
 //
@@ -17,19 +19,26 @@ function runComplete(run: Record<string, unknown>): boolean {
 }
 
 //
+// Check if any workflow runs are queued
+//
+function  runsQueued(runs: Record<string, unknown>): boolean {
+  return runs.total_count > 0
+}
+
+//
 // Poll workflow run until complete
 //
-async function pollRun (client: any, request: string, validate: any, interval: number, maxAttempts: number): Promise<Record<string, unknown>> {
+async function poll(client: any, request: string, validate: ValidateFunction, interval: number, maxAttempts: number): Promise<Record<string, unknown>> {
   let attempts = 0
 
-  async function executePoll (resolve: any, reject: any): Promise<any> {
+  async function executePoll (resolve: any, reject: any): Promise<unknown> {
     const result = await client.request(request)
     attempts++
 
     if (validate(result.data)) {
       return resolve(result.data)
     } else if (maxAttempts && attempts === maxAttempts) {
-      return reject(new Error('Exceeded max attempts'))
+      return resolve(result.data)
     } else {
       setTimeout(executePoll, interval, resolve, reject)
     }
@@ -83,16 +92,16 @@ async function run(): Promise<void> {
     })
     core.info(`Workflow dispatch response status: ${dispatchResp.status} 🚀`)
 
-    // Check workflow run status
-    await new Promise(r => setTimeout(r, 3000))
-    const runListResp = await octokit.request(`GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs`, {
-      event: 'workflow_dispatch',
-      status: 'queued'
-    })
-    if(runListResp.data.total_count === 0) throw new Error(`No workflow runs queued for '${workflowRef}' in ${owner}/${repo} 😥`)
-    const runId = runListResp.data.workflow_runs[0].id
+    // Retrieve queued workflow run
+    const listRequest = `GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs?event=workflow_dispatch&status=queued`
+    const runList = await poll(octokit, listRequest, runsQueued, 1000, 5)
+    if(runList.total_count === 0) throw new Error(`No workflow runs queued for '${workflowRef}' in ${owner}/${repo} 😥`)
+    const runId = runList.workflow_runs[0].id
     core.info(`Workflow run id is: ${runId}`)
-    const run = await pollRun(octokit, `GET /repos/${owner}/${repo}/actions/runs/${runId}`, runComplete, 5000, 100)
+
+    // Check workflow run status
+    const runRequest = `GET /repos/${owner}/${repo}/actions/runs/${runId}`
+    const run = await poll(octokit, runRequest, runComplete, 5000, 100)
     if(run.conclusion === 'success') {
       core.info(`Run ${run.id} succeeded 🥳: ${run.html_url}`)
     } else {
