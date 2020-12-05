@@ -17,6 +17,9 @@ inputs:
   repo:
     description: 'Repo owner & name, slash separated, only set if invoking a workflow in a different repo'
     required: false 
+  wait:
+    description: 'Boolean, whether or not the dispatched workflow should be waited for. Action will fail if the dispatched workflow fails'
+    required: false
 
 runs:
   using: 'node12'
