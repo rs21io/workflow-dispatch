@@ -26,8 +26,8 @@ async function pollRun (client: any, request: string, validate: any, interval: n
     const result = await client.request(request)
     attempts++
 
-    if (validate(result)) {
-      return resolve(result)
+    if (validate(result.data)) {
+      return resolve(result.data)
     } else if (maxAttempts && attempts === maxAttempts) {
       return reject(new Error('Exceeded max attempts'))
     } else {
