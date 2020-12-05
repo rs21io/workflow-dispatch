@@ -649,6 +649,7 @@ function run() {
             const [owner, repo] = core.getInput('repo')
                 ? core.getInput('repo').split('/')
                 : [github.context.repo.owner, github.context.repo.repo];
+            const wait = core.getInput('wait') || false;
             // Decode inputs, this MUST be a valid JSON string
             let inputs = {};
             const inputsJson = core.getInput('inputs');
@@ -674,21 +675,23 @@ function run() {
                 inputs: inputs
             });
             core.info(`Workflow dispatch response status: ${dispatchResp.status} 🚀`);
-            // Retrieve queued workflow run
-            const listRequest = `GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs?event=workflow_dispatch&status=queued`;
-            const runList = yield poll(octokit, listRequest, runsQueued, 1000, 5);
-            if (runList.total_count === 0)
-                throw new Error(`No workflow runs queued for '${workflowRef}' in ${owner}/${repo} 😥`);
-            const runId = runList.workflow_runs[0].id;
-            core.info(`Workflow run id is: ${runId}`);
-            // Check workflow run status
-            const runRequest = `GET /repos/${owner}/${repo}/actions/runs/${runId}`;
-            const run = yield poll(octokit, runRequest, runComplete, 5000, 100);
-            if (run.conclusion === 'success') {
-                core.info(`Run ${run.id} succeeded 🥳: ${run.html_url}`);
-            }
-            else {
-                throw new Error(`Workflow run ${run.id} completed unsuccessfully with status ${run.conclusion} 😥. For more information check ${run.html_url}`);
+            if (wait) {
+                // Retrieve queued workflow run
+                const listRequest = `GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs?event=workflow_dispatch&status=queued`;
+                const runList = yield poll(octokit, listRequest, runsQueued, 1000, 5);
+                if (runList.total_count === 0)
+                    throw new Error(`No workflow runs queued for '${workflowRef}' in ${owner}/${repo} 😥`);
+                const runId = runList.workflow_runs[0].id;
+                core.info(`Workflow run id is: ${runId}`);
+                // Check workflow run status
+                const runRequest = `GET /repos/${owner}/${repo}/actions/runs/${runId}`;
+                const run = yield poll(octokit, runRequest, runComplete, 5000, 100);
+                if (run.conclusion === 'success') {
+                    core.info(`Run ${run.id} succeeded 🥳: ${run.html_url}`);
+                }
+                else {
+                    throw new Error(`Workflow run ${run.id} completed unsuccessfully with status ${run.conclusion} 😥. For more information check ${run.html_url}`);
+                }
             }
         }
         catch (error) {
