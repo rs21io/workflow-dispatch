@@ -14,31 +14,31 @@ type ValidateFunction = (response: Record<string, unknown>) => boolean
 //
 // Check if run has completed
 //
-function runComplete(run: Record<string, unknown>): boolean {
+function runComplete(run: Record<string, any>): boolean {
   return run.status === 'completed'
 }
 
 //
 // Check if any workflow runs are queued
 //
-function  runsQueued(runs: Record<string, unknown>): boolean {
+function  runsQueued(runs: Record<string, any>): boolean {
   return runs.total_count > 0
 }
 
 //
 // Poll workflow run until complete
 //
-async function poll(client: any, request: string, validate: ValidateFunction, interval: number, maxAttempts: number): Promise<Record<string, unknown>> {
+async function poll(client: any, request: string, validate: ValidateFunction, interval: number, maxAttempts: number): Promise<Record<string, any>> {
   let attempts = 0
 
   async function executePoll (resolve: any, reject: any): Promise<unknown> {
-    const result = await client.request(request)
+    const response = await client.request(request)
     attempts++
 
-    if (validate(result.data)) {
-      return resolve(result.data)
+    if (validate(response.data)) {
+      return resolve(response.data)
     } else if (maxAttempts && attempts === maxAttempts) {
-      return resolve(result.data)
+      return resolve(response.data)
     } else {
       setTimeout(executePoll, interval, resolve, reject)
     }
