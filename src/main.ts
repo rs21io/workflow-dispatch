@@ -86,7 +86,7 @@ async function run(): Promise<void> {
     // Check workflow run status
     const runListResp = await octokit.request(`GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs`, {
       event: 'workflow_dispatch',
-      status: 'queued'
+      status: 'in_progress'
     })
     if(runListResp.data.total_count === 0) throw new Error(`No workflow runs queued for '${workflowRef}' in ${owner}/${repo} 😥`)
     const runId = runListResp.data.workflow_runs[0].id
