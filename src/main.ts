@@ -84,6 +84,7 @@ async function run(): Promise<void> {
     core.info(`Workflow dispatch response status: ${dispatchResp.status} 🚀`)
 
     // Check workflow run status
+    await new Promise(r => setTimeout(r, 2000))
     const runListResp = await octokit.request(`GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs`, {
       event: 'workflow_dispatch',
       status: 'queued'
