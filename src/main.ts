@@ -52,7 +52,32 @@ async function run(): Promise<void> {
       ref: ref,
       inputs: inputs
     })
-    core.info(`API response status: ${dispatchResp.status} 🚀`)
+    core.info(`Workflow dispatch response status: ${dispatchResp.status} 🚀`)
+
+    // Check workflow run status
+    const runListResp = await octokit.request(`GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs`, {
+      event: 'workflow_dispatch',
+      status: 'queued'
+    })
+    if(runListResp.data.total_count === 0) throw new Error(`No workflow runs queued for '${workflowRef}' in ${owner}/${repo} 😥`)
+    const runId = runListResp.data.workflow_runs[0].id
+    console.log(`Workflow run id is: ${runId}`)
+    // TODO: this is basically pseudo code the idea is to poll 
+    // the workflow run until it completes
+    while(true) {
+      // Check workflow run status
+      const run = await octokit.request(`GET /repos/${owner}/${repo}/actions/runs/${runId}`)
+      if(run.status === 'completed') {
+        if(run.conclusion === 'success') {
+          break
+        } else {
+          throw new Error(`Workflow run ${run.id} completed unsuccessfully with status ${run.conclusion}. For more information check ${run.html_url}`)
+        }
+      } else {
+        // Pause between polls
+        sleep(1)
+      }
+    }
   } catch (error) {
     core.setFailed(error.message)
   }
