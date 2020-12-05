@@ -615,8 +615,8 @@ function pollRun(client, request, validate, interval, maxAttempts) {
             return __awaiter(this, void 0, void 0, function* () {
                 const result = yield client.request(request);
                 attempts++;
-                if (validate(result)) {
-                    return resolve(result);
+                if (validate(result.data)) {
+                    return resolve(result.data);
                 }
                 else if (maxAttempts && attempts === maxAttempts) {
                     return reject(new Error('Exceeded max attempts'));
@@ -669,6 +669,7 @@ function run() {
             });
             core.info(`Workflow dispatch response status: ${dispatchResp.status} 🚀`);
             // Check workflow run status
+            yield new Promise(r => setTimeout(r, 3000));
             const runListResp = yield octokit.request(`GET /repos/${owner}/${repo}/actions/workflows/${workflowFind.id}/runs`, {
                 event: 'workflow_dispatch',
                 status: 'queued'
